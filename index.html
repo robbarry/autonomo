@@ -21,10 +21,6 @@
       <div id="controls-content">
         <div id="stats">
           <div class="stat">
-            <span class="label">Generation</span>
-            <span id="generation" class="value">1</span>
-          </div>
-          <div class="stat">
             <span class="label">Alive</span>
             <span id="alive" class="value">0</span>
           </div>
@@ -37,12 +33,16 @@
             <span id="deaths" class="value">0</span>
           </div>
           <div class="stat">
-            <span class="label">Best Fitness</span>
-            <span id="best-fitness" class="value">0</span>
+            <span class="label">Food</span>
+            <span id="food-count" class="value">0</span>
           </div>
           <div class="stat">
-            <span class="label">Avg Fitness</span>
-            <span id="avg-fitness" class="value">0</span>
+            <span class="label">Most Food</span>
+            <span id="most-food" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Most Kids</span>
+            <span id="most-offspring" class="value">0</span>
           </div>
         </div>
 
@@ -54,7 +54,11 @@
 
         <div id="sliders">
           <div class="slider-group">
-            <label for="pop-size">Population: <span id="pop-val">30</span></label>
+            <label for="food-rate">Food Spawn Rate: <span id="food-val">1x</span></label>
+            <input type="range" id="food-rate" min="1" max="10" step="1" value="1">
+          </div>
+          <div class="slider-group">
+            <label for="pop-size">Starting Pop: <span id="pop-val">30</span></label>
             <input type="range" id="pop-size" min="10" max="100" step="5" value="30">
           </div>
         </div>

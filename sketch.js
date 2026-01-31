@@ -3,7 +3,6 @@
 
 let creatures = [];
 let food = [];
-let generation = 1;
 let paused = false;
 let speed = 1;
 let speedOptions = [1, 2, 5, 10];
@@ -13,15 +12,12 @@ let speedIndex = 0;
 window.populationSize = 30;
 window.canvasWidth = 600;
 window.canvasHeight = 600;
+window.foodSpawnRate = 1; // multiplier for food spawning
 
 // Stats tracking
 let totalBirths = 0;
 let totalDeaths = 0;
-let allTimeBestFitness = 0;
 
-// Generation tracking (soft generations based on time)
-let generationTime = 0;
-let generationLength = 2000; // frames per "generation" for stats
 
 function setup() {
   // Canvas fills the full window
@@ -49,7 +45,6 @@ function initPopulation() {
       random(50, window.canvasHeight - 50)
     ));
   }
-  generationTime = 0;
   totalBirths = 0;
   totalDeaths = 0;
 }
@@ -84,8 +79,6 @@ function setupUI() {
   // Reset button
   const resetBtn = document.getElementById('reset-btn');
   resetBtn.addEventListener('click', () => {
-    generation = 1;
-    allTimeBestFitness = 0;
     initPopulation();
     food = [];
     for (let i = 0; i < 40; i++) {
@@ -103,6 +96,16 @@ function setupUI() {
       popVal.textContent = window.populationSize;
     });
   }
+
+  // Food spawn rate slider
+  const foodSlider = document.getElementById('food-rate');
+  const foodVal = document.getElementById('food-val');
+  if (foodSlider) {
+    foodSlider.addEventListener('input', () => {
+      window.foodSpawnRate = parseInt(foodSlider.value);
+      foodVal.textContent = window.foodSpawnRate + 'x';
+    });
+  }
 }
 
 function draw() {
@@ -117,14 +120,6 @@ function draw() {
 }
 
 function simulationStep() {
-  generationTime++;
-
-  // Soft generation tracking
-  if (generationTime >= generationLength) {
-    generation++;
-    generationTime = 0;
-  }
-
   // Think, update, eat for all creatures
   for (let c of creatures) {
     c.think(food, creatures, window.canvasWidth, window.canvasHeight);
@@ -166,8 +161,10 @@ function simulationStep() {
     }
   }
 
-  // Spawn food periodically
-  if (frameCount % 15 === 0 && food.length < 60) {
+  // Spawn food periodically (rate affected by slider)
+  const spawnInterval = max(1, floor(15 / window.foodSpawnRate));
+  const maxFood = 40 + window.foodSpawnRate * 20;
+  if (frameCount % spawnInterval === 0 && food.length < maxFood) {
     spawnFood();
   }
 }
@@ -184,40 +181,27 @@ function render() {
   for (let c of creatures) {
     c.display();
   }
-
-  // Draw soft generation progress bar
-  const progress = generationTime / generationLength;
-  noStroke();
-  fill(78, 204, 163, 80);
-  rect(0, height - 3, width * progress, 3);
 }
 
 function updateStats() {
-  const aliveCount = creatures.filter(c => c.alive).length;
+  const aliveCreatures = creatures.filter(c => c.alive);
+  const aliveCount = aliveCreatures.length;
 
-  // Calculate current best and average fitness
-  let currentBest = 0;
-  let totalFitness = 0;
+  // Find creatures with most food eaten and most offspring
+  let mostFood = 0;
+  let mostOffspring = 0;
 
-  for (let c of creatures) {
-    const fit = pow(c.foodEaten, 2) * 50 + c.offspring * 200 + c.age * 0.05;
-    totalFitness += fit;
-    if (fit > currentBest) currentBest = fit;
-    if (fit > allTimeBestFitness) allTimeBestFitness = fit;
+  for (let c of aliveCreatures) {
+    if (c.foodEaten > mostFood) mostFood = c.foodEaten;
+    if (c.offspring > mostOffspring) mostOffspring = c.offspring;
   }
 
-  const avgFitness = creatures.length > 0 ? totalFitness / creatures.length : 0;
-
-  document.getElementById('generation').textContent = generation;
   document.getElementById('alive').textContent = aliveCount;
-  document.getElementById('best-fitness').textContent = Math.round(allTimeBestFitness);
-  document.getElementById('avg-fitness').textContent = Math.round(avgFitness);
-
-  // Update births/deaths if elements exist
-  const birthsEl = document.getElementById('births');
-  const deathsEl = document.getElementById('deaths');
-  if (birthsEl) birthsEl.textContent = totalBirths;
-  if (deathsEl) deathsEl.textContent = totalDeaths;
+  document.getElementById('births').textContent = totalBirths;
+  document.getElementById('deaths').textContent = totalDeaths;
+  document.getElementById('food-count').textContent = food.length;
+  document.getElementById('most-food').textContent = mostFood;
+  document.getElementById('most-offspring').textContent = mostOffspring;
 }
 
 function spawnFood() {
