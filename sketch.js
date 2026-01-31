@@ -1,5 +1,4 @@
-// Neuroevolution Simulator - Main p5.js sketch
-// Features: Real-time mating, ray-casting sensors, adaptive mutation
+// Neuroevolution Simulator with morphological diversity and predation
 
 let creatures = [];
 let food = [];
@@ -8,19 +7,16 @@ let speed = 1;
 let speedOptions = [1, 2, 5, 10];
 let speedIndex = 0;
 
-// Global settings
-window.populationSize = 30;
+window.populationSize = 25;
 window.canvasWidth = 600;
 window.canvasHeight = 600;
-window.foodSpawnRate = 1; // multiplier for food spawning
+window.foodSpawnRate = 1;
 
-// Stats tracking
 let totalBirths = 0;
 let totalDeaths = 0;
-
+let totalPredations = 0;
 
 function setup() {
-  // Canvas fills the full viewport
   const w = window.innerWidth;
   const h = window.innerHeight;
   window.canvasWidth = w;
@@ -28,14 +24,10 @@ function setup() {
 
   const canvas = createCanvas(w, h);
   canvas.parent('canvas-container');
-  canvas.style('display', 'block');
-  canvas.style('width', '100%');
-  canvas.style('height', '100%');
 
   initPopulation();
-  console.log('Setup: created', creatures.length, 'creatures');
 
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 50; i++) {
     spawnFood();
   }
 
@@ -46,16 +38,16 @@ function initPopulation() {
   creatures = [];
   for (let i = 0; i < window.populationSize; i++) {
     creatures.push(new Creature(
-      random(50, window.canvasWidth - 50),
-      random(50, window.canvasHeight - 50)
+      random(100, window.canvasWidth - 100),
+      random(100, window.canvasHeight - 100)
     ));
   }
   totalBirths = 0;
   totalDeaths = 0;
+  totalPredations = 0;
 }
 
 function setupUI() {
-  // Collapsible controls - toggle the whole panel
   const controls = document.getElementById('controls');
   const controlsHeader = document.getElementById('controls-header');
 
@@ -65,7 +57,6 @@ function setupUI() {
     });
   }
 
-  // Pause button
   const pauseBtn = document.getElementById('pause-btn');
   pauseBtn.addEventListener('click', () => {
     paused = !paused;
@@ -73,7 +64,6 @@ function setupUI() {
     pauseBtn.classList.toggle('paused', paused);
   });
 
-  // Speed button
   const speedBtn = document.getElementById('speed-btn');
   speedBtn.addEventListener('click', () => {
     speedIndex = (speedIndex + 1) % speedOptions.length;
@@ -81,18 +71,16 @@ function setupUI() {
     speedBtn.textContent = speed + 'x';
   });
 
-  // Reset button
   const resetBtn = document.getElementById('reset-btn');
   resetBtn.addEventListener('click', () => {
     initPopulation();
     food = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 50; i++) {
       spawnFood();
     }
     updateStats();
   });
 
-  // Population size slider
   const popSlider = document.getElementById('pop-size');
   const popVal = document.getElementById('pop-val');
   if (popSlider) {
@@ -102,7 +90,6 @@ function setupUI() {
     });
   }
 
-  // Food spawn rate slider
   const foodSlider = document.getElementById('food-rate');
   const foodVal = document.getElementById('food-val');
   if (foodSlider) {
@@ -125,14 +112,22 @@ function draw() {
 }
 
 function simulationStep() {
-  // Think, update, eat for all creatures
+  // Think and update
   for (let c of creatures) {
     c.think(food, creatures, window.canvasWidth, window.canvasHeight);
     c.update(window.canvasWidth, window.canvasHeight);
     c.eat(food);
   }
 
-  // Real-time mating - creatures that touch and both can mate will reproduce
+  // Predation - bigger creatures eat smaller ones
+  for (let c of creatures) {
+    const victim = c.tryEatCreature(creatures);
+    if (victim) {
+      totalPredations++;
+    }
+  }
+
+  // Mating
   const newborns = [];
   const matedThisFrame = new Set();
 
@@ -147,70 +142,75 @@ function simulationStep() {
     }
   }
 
-  // Add newborns to population
   creatures.push(...newborns);
 
-  // Remove dead creatures
+  // Remove dead
   const beforeCount = creatures.length;
   creatures = creatures.filter(c => c.alive);
   totalDeaths += beforeCount - creatures.length;
 
-  // Population control: if too many, let natural selection work
-  // If too few, spawn some random creatures to maintain diversity
-  if (creatures.length < 5) {
+  // Maintain minimum population
+  if (creatures.length < 8) {
     for (let i = 0; i < 5; i++) {
       creatures.push(new Creature(
-        random(50, window.canvasWidth - 50),
-        random(50, window.canvasHeight - 50)
+        random(100, window.canvasWidth - 100),
+        random(100, window.canvasHeight - 100)
       ));
     }
   }
 
-  // Spawn food periodically (rate affected by slider)
-  const spawnInterval = max(1, floor(15 / window.foodSpawnRate));
-  const maxFood = 40 + window.foodSpawnRate * 20;
+  // Spawn food
+  const spawnInterval = max(1, floor(12 / window.foodSpawnRate));
+  const maxFood = 50 + window.foodSpawnRate * 25;
   if (frameCount % spawnInterval === 0 && food.length < maxFood) {
     spawnFood();
   }
 }
 
 function render() {
-  background(15, 15, 26);
+  background(12, 15, 25);
 
   // Draw food
   for (let f of food) {
     f.display();
   }
 
-  // Draw creatures
+  // Draw creatures (smaller ones first so big ones appear on top)
+  creatures.sort((a, b) => a.radius - b.radius);
   for (let c of creatures) {
     c.display();
   }
 }
 
 function updateStats() {
-  const aliveCreatures = creatures.filter(c => c.alive);
-  const aliveCount = aliveCreatures.length;
+  const alive = creatures.filter(c => c.alive);
 
-  // Find creatures with most food eaten and most offspring
-  let mostFood = 0;
-  let mostOffspring = 0;
+  // Find extremes
+  let smallest = Infinity, largest = 0;
+  let mostAppendages = 0;
 
-  for (let c of aliveCreatures) {
-    if (c.foodEaten > mostFood) mostFood = c.foodEaten;
-    if (c.offspring > mostOffspring) mostOffspring = c.offspring;
+  for (let c of alive) {
+    if (c.radius < smallest) smallest = c.radius;
+    if (c.radius > largest) largest = c.radius;
+    if (c.genome.appendages > mostAppendages) mostAppendages = c.genome.appendages;
   }
 
-  document.getElementById('alive').textContent = aliveCount;
+  document.getElementById('alive').textContent = alive.length;
   document.getElementById('births').textContent = totalBirths;
   document.getElementById('deaths').textContent = totalDeaths;
   document.getElementById('food-count').textContent = food.length;
-  document.getElementById('most-food').textContent = mostFood;
-  document.getElementById('most-offspring').textContent = mostOffspring;
+
+  const predEl = document.getElementById('predations');
+  if (predEl) predEl.textContent = totalPredations;
+
+  const sizeEl = document.getElementById('size-range');
+  if (sizeEl && alive.length > 0) {
+    sizeEl.textContent = Math.round(smallest) + '-' + Math.round(largest);
+  }
 }
 
 function spawnFood() {
-  const margin = 30;
+  const margin = 40;
   food.push(new Food(
     random(margin, window.canvasWidth - margin),
     random(margin, window.canvasHeight - margin)
