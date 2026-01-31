@@ -27,14 +27,19 @@ function setup() {
   const container = document.getElementById('canvas-container');
   const containerRect = container.getBoundingClientRect();
 
-  const size = min(containerRect.width, containerRect.height, 800);
+  // Ensure minimum size if container hasn't sized yet
+  let size = min(containerRect.width || 400, containerRect.height || 400, 800);
+  size = max(size, 300); // Minimum 300px
+
   window.canvasWidth = size;
   window.canvasHeight = size;
 
+  console.log('Setup: canvas size', size);
   const canvas = createCanvas(size, size);
   canvas.parent('canvas-container');
 
   initPopulation();
+  console.log('Setup: created', creatures.length, 'creatures');
 
   for (let i = 0; i < 40; i++) {
     spawnFood();
