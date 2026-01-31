@@ -168,8 +168,9 @@ class Creature {
   angleToPoint(px, py) {
     const targetAngle = atan2(py - this.pos.y, px - this.pos.x);
     let diff = targetAngle - this.angle;
-    while (diff > PI) diff -= TWO_PI;
-    while (diff < -PI) diff += TWO_PI;
+    if (!isFinite(diff)) return 0;
+    // Normalize to -PI to PI
+    diff = ((diff + PI) % TWO_PI + TWO_PI) % TWO_PI - PI;
     return diff;
   }
 
@@ -181,7 +182,7 @@ class Creature {
 
     // Output 0: turn rate
     const turnRate = (outputs[0] - 0.5) * 0.2;
-    this.angle += turnRate;
+    if (isFinite(turnRate)) this.angle += turnRate;
 
     // Output 1: speed (0-1)
     let targetSpeed = outputs[1] * this.maxSpeed;
@@ -429,11 +430,12 @@ class Creature {
         rect(i * this.radius * 0.4 - 2, -this.radius, 4, this.radius * 2);
       }
     } else {
-      // Spots
+      // Spots - use deterministic positions based on genome
+      const seed = this.genome.hue * 100;
       for (let i = 0; i < 4; i++) {
-        const sx = random(-this.radius * 0.5, this.radius * 0.5);
-        const sy = random(-this.radius * 0.4, this.radius * 0.4);
-        ellipse(sx, sy, this.radius * 0.3);
+        const sx = sin(seed + i * 1.7) * this.radius * 0.4;
+        const sy = cos(seed + i * 2.3) * this.radius * 0.3;
+        ellipse(sx, sy, this.radius * 0.25);
       }
     }
   }
