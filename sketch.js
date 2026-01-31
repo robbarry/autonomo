@@ -20,12 +20,17 @@ let totalDeaths = 0;
 
 
 function setup() {
-  // Canvas fills the full window
-  window.canvasWidth = windowWidth;
-  window.canvasHeight = windowHeight;
+  // Canvas fills the full viewport
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  window.canvasWidth = w;
+  window.canvasHeight = h;
 
-  const canvas = createCanvas(windowWidth, windowHeight);
+  const canvas = createCanvas(w, h);
   canvas.parent('canvas-container');
+  canvas.style('display', 'block');
+  canvas.style('width', '100%');
+  canvas.style('height', '100%');
 
   initPopulation();
   console.log('Setup: created', creatures.length, 'creatures');

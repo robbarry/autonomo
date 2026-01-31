@@ -87,6 +87,7 @@ class Creature {
   }
 
   normalizeAngle(angle) {
+    if (!isFinite(angle)) return 0;
     while (angle > PI) angle -= TWO_PI;
     while (angle < -PI) angle += TWO_PI;
     return angle;

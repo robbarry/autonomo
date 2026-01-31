@@ -61,16 +61,20 @@ class NeuralNetwork {
   // Forward propagation
   forward(inputs) {
     if (inputs.length !== this.inputSize) {
-      console.error(`Expected ${this.inputSize} inputs, got ${inputs.length}`);
       return new Array(this.outputSize).fill(0.5);
+    }
+
+    // Sanitize inputs
+    for (let i = 0; i < inputs.length; i++) {
+      if (!isFinite(inputs[i])) inputs[i] = 0;
     }
 
     // Hidden layer: tanh(W_ih * inputs + b_h)
     const hidden = [];
     for (let i = 0; i < this.hiddenSize; i++) {
-      let sum = this.biasH[i];
+      let sum = this.biasH[i] || 0;
       for (let j = 0; j < this.inputSize; j++) {
-        sum += this.weightsIH[i][j] * inputs[j];
+        sum += (this.weightsIH[i][j] || 0) * inputs[j];
       }
       hidden[i] = this.tanh(sum);
     }
@@ -78,9 +82,9 @@ class NeuralNetwork {
     // Output layer: sigmoid(W_ho * hidden + b_o)
     const outputs = [];
     for (let i = 0; i < this.outputSize; i++) {
-      let sum = this.biasO[i];
+      let sum = this.biasO[i] || 0;
       for (let j = 0; j < this.hiddenSize; j++) {
-        sum += this.weightsHO[i][j] * hidden[j];
+        sum += (this.weightsHO[i][j] || 0) * hidden[j];
       }
       outputs[i] = this.sigmoid(sum);
     }
