@@ -24,18 +24,11 @@ let generationTime = 0;
 let generationLength = 2000; // frames per "generation" for stats
 
 function setup() {
-  const container = document.getElementById('canvas-container');
-  const containerRect = container.getBoundingClientRect();
+  // Canvas fills the full window
+  window.canvasWidth = windowWidth;
+  window.canvasHeight = windowHeight;
 
-  // Ensure minimum size if container hasn't sized yet
-  let size = min(containerRect.width || 400, containerRect.height || 400, 800);
-  size = max(size, 300); // Minimum 300px
-
-  window.canvasWidth = size;
-  window.canvasHeight = size;
-
-  console.log('Setup: canvas size', size);
-  const canvas = createCanvas(size, size);
+  const canvas = createCanvas(windowWidth, windowHeight);
   canvas.parent('canvas-container');
 
   initPopulation();
@@ -62,14 +55,13 @@ function initPopulation() {
 }
 
 function setupUI() {
-  // Collapsible controls
+  // Collapsible controls - toggle the whole panel
+  const controls = document.getElementById('controls');
   const controlsHeader = document.getElementById('controls-header');
-  const controlsContent = document.getElementById('controls-content');
 
-  if (controlsHeader && controlsContent) {
+  if (controlsHeader && controls) {
     controlsHeader.addEventListener('click', () => {
-      controlsContent.classList.toggle('collapsed');
-      controlsHeader.classList.toggle('collapsed');
+      controls.classList.toggle('collapsed');
     });
   }
 
@@ -237,10 +229,7 @@ function spawnFood() {
 }
 
 function windowResized() {
-  const container = document.getElementById('canvas-container');
-  const containerRect = container.getBoundingClientRect();
-  const size = min(containerRect.width, containerRect.height, 800);
-  window.canvasWidth = size;
-  window.canvasHeight = size;
-  resizeCanvas(size, size);
+  window.canvasWidth = windowWidth;
+  window.canvasHeight = windowHeight;
+  resizeCanvas(windowWidth, windowHeight);
 }
