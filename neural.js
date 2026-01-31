@@ -2,9 +2,9 @@
 // Architecture: variable inputs -> variable hidden -> 2 outputs
 
 class NeuralNetwork {
-  constructor(inputSize = 18, hiddenSize = 16, outputSize = 4) {
-    // 18 inputs: 8 food rays + 8 wall rays + energy + speed
-    // 4 outputs: turn rate, speed, seek food vs mate preference
+  constructor(inputSize = 10, hiddenSize = 12, outputSize = 4) {
+    // 10 inputs: food dist/angle, 4 wall dists, mate dist/angle, energy, speed
+    // 4 outputs: turn rate, speed, mate-seeking, mate acceptance
     this.inputSize = inputSize;
     this.hiddenSize = hiddenSize;
     this.outputSize = outputSize;
