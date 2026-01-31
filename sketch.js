@@ -1,4 +1,5 @@
 // Neuroevolution Simulator - Main p5.js sketch
+// Features: Real-time mating, ray-casting sensors, adaptive mutation
 
 let creatures = [];
 let food = [];
@@ -9,26 +10,23 @@ let speedOptions = [1, 2, 5, 10];
 let speedIndex = 0;
 
 // Global settings
-window.mutationRate = 0.1;
 window.populationSize = 30;
 window.canvasWidth = 600;
 window.canvasHeight = 600;
 
-// Generation tracking
-let generationTime = 0;
-let maxGenerationTime = 1500; // frames before forced new generation
+// Stats tracking
+let totalBirths = 0;
+let totalDeaths = 0;
 let allTimeBestFitness = 0;
-let generationBestFitness = 0;
 
-// Elitism
-const eliteCount = 2;
+// Generation tracking (soft generations based on time)
+let generationTime = 0;
+let generationLength = 2000; // frames per "generation" for stats
 
 function setup() {
-  // Calculate canvas size based on container
   const container = document.getElementById('canvas-container');
   const containerRect = container.getBoundingClientRect();
 
-  // Use smaller dimension to keep canvas square, max 800px
   const size = min(containerRect.width, containerRect.height, 800);
   window.canvasWidth = size;
   window.canvasHeight = size;
@@ -36,15 +34,12 @@ function setup() {
   const canvas = createCanvas(size, size);
   canvas.parent('canvas-container');
 
-  // Initialize population
   initPopulation();
 
-  // Spawn initial food
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 40; i++) {
     spawnFood();
   }
 
-  // Set up UI event listeners
   setupUI();
 }
 
@@ -57,9 +52,22 @@ function initPopulation() {
     ));
   }
   generationTime = 0;
+  totalBirths = 0;
+  totalDeaths = 0;
 }
 
 function setupUI() {
+  // Collapsible controls
+  const controlsHeader = document.getElementById('controls-header');
+  const controlsContent = document.getElementById('controls-content');
+
+  if (controlsHeader && controlsContent) {
+    controlsHeader.addEventListener('click', () => {
+      controlsContent.classList.toggle('collapsed');
+      controlsHeader.classList.toggle('collapsed');
+    });
+  }
+
   // Pause button
   const pauseBtn = document.getElementById('pause-btn');
   pauseBtn.addEventListener('click', () => {
@@ -81,41 +89,32 @@ function setupUI() {
   resetBtn.addEventListener('click', () => {
     generation = 1;
     allTimeBestFitness = 0;
-    generationBestFitness = 0;
     initPopulation();
     food = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 40; i++) {
       spawnFood();
     }
     updateStats();
   });
 
-  // Mutation rate slider
-  const mutationSlider = document.getElementById('mutation-rate');
-  const mutationVal = document.getElementById('mutation-val');
-  mutationSlider.addEventListener('input', () => {
-    window.mutationRate = parseFloat(mutationSlider.value);
-    mutationVal.textContent = window.mutationRate.toFixed(2);
-  });
-
   // Population size slider
   const popSlider = document.getElementById('pop-size');
   const popVal = document.getElementById('pop-val');
-  popSlider.addEventListener('input', () => {
-    window.populationSize = parseInt(popSlider.value);
-    popVal.textContent = window.populationSize;
-  });
+  if (popSlider) {
+    popSlider.addEventListener('input', () => {
+      window.populationSize = parseInt(popSlider.value);
+      popVal.textContent = window.populationSize;
+    });
+  }
 }
 
 function draw() {
   if (paused) return;
 
-  // Run multiple simulation steps per frame for speed
   for (let s = 0; s < speed; s++) {
     simulationStep();
   }
 
-  // Render
   render();
   updateStats();
 }
@@ -123,29 +122,56 @@ function draw() {
 function simulationStep() {
   generationTime++;
 
-  // Think and update all creatures
+  // Soft generation tracking
+  if (generationTime >= generationLength) {
+    generation++;
+    generationTime = 0;
+  }
+
+  // Think, update, eat for all creatures
   for (let c of creatures) {
-    c.think(food, window.canvasWidth, window.canvasHeight);
+    c.think(food, creatures, window.canvasWidth, window.canvasHeight);
     c.update(window.canvasWidth, window.canvasHeight);
     c.eat(food);
+  }
 
-    // Asexual reproduction when energy is high
-    if (c.canReproduce() && creatures.length < window.populationSize * 1.5) {
-      const child = c.reproduce();
-      if (child) creatures.push(child);
+  // Real-time mating - creatures that touch and both can mate will reproduce
+  const newborns = [];
+  const matedThisFrame = new Set();
+
+  for (let c of creatures) {
+    if (!c.alive || !c.canMate() || matedThisFrame.has(c)) continue;
+
+    const child = c.tryMate(creatures);
+    if (child) {
+      newborns.push(child);
+      matedThisFrame.add(c);
+      totalBirths++;
+    }
+  }
+
+  // Add newborns to population
+  creatures.push(...newborns);
+
+  // Remove dead creatures
+  const beforeCount = creatures.length;
+  creatures = creatures.filter(c => c.alive);
+  totalDeaths += beforeCount - creatures.length;
+
+  // Population control: if too many, let natural selection work
+  // If too few, spawn some random creatures to maintain diversity
+  if (creatures.length < 5) {
+    for (let i = 0; i < 5; i++) {
+      creatures.push(new Creature(
+        random(50, window.canvasWidth - 50),
+        random(50, window.canvasHeight - 50)
+      ));
     }
   }
 
   // Spawn food periodically
-  if (frameCount % 20 === 0 && food.length < 50) {
+  if (frameCount % 15 === 0 && food.length < 60) {
     spawnFood();
-  }
-
-  // Check for generation end
-  const aliveCount = creatures.filter(c => c.alive).length;
-
-  if (aliveCount === 0 || generationTime >= maxGenerationTime) {
-    nextGeneration();
   }
 }
 
@@ -162,119 +188,39 @@ function render() {
     c.display();
   }
 
-  // Draw generation progress bar
-  const progress = generationTime / maxGenerationTime;
+  // Draw soft generation progress bar
+  const progress = generationTime / generationLength;
   noStroke();
-  fill(78, 204, 163, 100);
-  rect(0, height - 4, width * progress, 4);
+  fill(78, 204, 163, 80);
+  rect(0, height - 3, width * progress, 3);
 }
 
 function updateStats() {
-  const aliveCreatures = creatures.filter(c => c.alive);
+  const aliveCount = creatures.filter(c => c.alive).length;
 
   // Calculate current best and average fitness
   let currentBest = 0;
   let totalFitness = 0;
 
   for (let c of creatures) {
-    const fit = c.foodEaten * 100 + c.age * 0.1;
+    const fit = pow(c.foodEaten, 2) * 50 + c.offspring * 200 + c.age * 0.05;
     totalFitness += fit;
     if (fit > currentBest) currentBest = fit;
-    if (fit > generationBestFitness) generationBestFitness = fit;
-  }
-
-  if (generationBestFitness > allTimeBestFitness) {
-    allTimeBestFitness = generationBestFitness;
+    if (fit > allTimeBestFitness) allTimeBestFitness = fit;
   }
 
   const avgFitness = creatures.length > 0 ? totalFitness / creatures.length : 0;
 
   document.getElementById('generation').textContent = generation;
-  document.getElementById('alive').textContent = aliveCreatures.length;
+  document.getElementById('alive').textContent = aliveCount;
   document.getElementById('best-fitness').textContent = Math.round(allTimeBestFitness);
   document.getElementById('avg-fitness').textContent = Math.round(avgFitness);
-}
 
-function nextGeneration() {
-  generation++;
-  generationBestFitness = 0;
-
-  // Calculate fitness for all creatures
-  for (let c of creatures) {
-    c.calculateFitness();
-  }
-
-  // Sort by fitness (descending)
-  creatures.sort((a, b) => b.fitness - a.fitness);
-
-  // Create new population
-  const newCreatures = [];
-
-  // Elitism: keep top performers unchanged
-  for (let i = 0; i < eliteCount && i < creatures.length; i++) {
-    const elite = new Creature(
-      random(50, window.canvasWidth - 50),
-      random(50, window.canvasHeight - 50),
-      creatures[i].brain
-    );
-    elite.hue = creatures[i].hue;
-    newCreatures.push(elite);
-  }
-
-  // Fill rest with offspring from tournament selection
-  while (newCreatures.length < window.populationSize) {
-    const parent1 = tournamentSelect(creatures);
-    const parent2 = tournamentSelect(creatures);
-
-    if (parent1 && parent2) {
-      const child = Creature.crossover(parent1, parent2, window.mutationRate);
-      newCreatures.push(child);
-    } else if (parent1) {
-      // Asexual reproduction if can't find second parent
-      const childBrain = parent1.brain.clone();
-      childBrain.mutate(window.mutationRate);
-      const child = new Creature(
-        random(50, window.canvasWidth - 50),
-        random(50, window.canvasHeight - 50),
-        childBrain
-      );
-      newCreatures.push(child);
-    } else {
-      // Random new creature if no parents available
-      newCreatures.push(new Creature(
-        random(50, window.canvasWidth - 50),
-        random(50, window.canvasHeight - 50)
-      ));
-    }
-  }
-
-  creatures = newCreatures;
-  generationTime = 0;
-
-  // Reset food
-  food = [];
-  for (let i = 0; i < 30; i++) {
-    spawnFood();
-  }
-}
-
-// Tournament selection: pick 3 random, return best
-function tournamentSelect(population) {
-  if (population.length === 0) return null;
-
-  const tournamentSize = min(3, population.length);
-  let best = null;
-  let bestFitness = -Infinity;
-
-  for (let i = 0; i < tournamentSize; i++) {
-    const candidate = random(population);
-    if (candidate.fitness > bestFitness) {
-      bestFitness = candidate.fitness;
-      best = candidate;
-    }
-  }
-
-  return best;
+  // Update births/deaths if elements exist
+  const birthsEl = document.getElementById('births');
+  const deathsEl = document.getElementById('deaths');
+  if (birthsEl) birthsEl.textContent = totalBirths;
+  if (deathsEl) deathsEl.textContent = totalDeaths;
 }
 
 function spawnFood() {
@@ -285,7 +231,6 @@ function spawnFood() {
   ));
 }
 
-// Handle window resize
 function windowResized() {
   const container = document.getElementById('canvas-container');
   const containerRect = container.getBoundingClientRect();

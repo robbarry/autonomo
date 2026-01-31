@@ -13,44 +13,56 @@
     <div id="canvas-container"></div>
 
     <div id="controls">
-      <div id="stats">
-        <div class="stat">
-          <span class="label">Generation</span>
-          <span id="generation" class="value">1</span>
-        </div>
-        <div class="stat">
-          <span class="label">Alive</span>
-          <span id="alive" class="value">0</span>
-        </div>
-        <div class="stat">
-          <span class="label">Best Fitness</span>
-          <span id="best-fitness" class="value">0</span>
-        </div>
-        <div class="stat">
-          <span class="label">Avg Fitness</span>
-          <span id="avg-fitness" class="value">0</span>
-        </div>
+      <div id="controls-header">
+        <span class="title">Controls</span>
+        <span class="toggle-icon">▼</span>
       </div>
 
-      <div id="buttons">
-        <button id="pause-btn" class="btn">Pause</button>
-        <button id="speed-btn" class="btn">1x</button>
-        <button id="reset-btn" class="btn">Reset</button>
-      </div>
-
-      <div id="sliders">
-        <div class="slider-group">
-          <label for="mutation-rate">Mutation Rate: <span id="mutation-val">0.1</span></label>
-          <input type="range" id="mutation-rate" min="0.01" max="0.5" step="0.01" value="0.1">
+      <div id="controls-content">
+        <div id="stats">
+          <div class="stat">
+            <span class="label">Generation</span>
+            <span id="generation" class="value">1</span>
+          </div>
+          <div class="stat">
+            <span class="label">Alive</span>
+            <span id="alive" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Births</span>
+            <span id="births" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Deaths</span>
+            <span id="deaths" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Best Fitness</span>
+            <span id="best-fitness" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Avg Fitness</span>
+            <span id="avg-fitness" class="value">0</span>
+          </div>
         </div>
-        <div class="slider-group">
-          <label for="pop-size">Population: <span id="pop-val">30</span></label>
-          <input type="range" id="pop-size" min="10" max="100" step="5" value="30">
-        </div>
-      </div>
 
-      <div id="info">
-        <p>Creatures evolve neural networks to find food. Natural selection favors those who eat more and survive longer.</p>
+        <div id="buttons">
+          <button id="pause-btn" class="btn">Pause</button>
+          <button id="speed-btn" class="btn">1x</button>
+          <button id="reset-btn" class="btn">Reset</button>
+        </div>
+
+        <div id="sliders">
+          <div class="slider-group">
+            <label for="pop-size">Population: <span id="pop-val">30</span></label>
+            <input type="range" id="pop-size" min="10" max="100" step="5" value="30">
+          </div>
+        </div>
+
+        <div id="info">
+          <p><strong>How it works:</strong> Creatures have neural network brains with 8 ray-cast sensors. They must eat food to survive and find mates to reproduce. Offspring inherit blended genes from both parents with mutations. Natural selection favors those who eat more and reproduce successfully.</p>
+          <p class="hint">🔴 = ready to mate</p>
+        </div>
       </div>
     </div>
   </div>

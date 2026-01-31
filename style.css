@@ -25,6 +25,7 @@ body {
   justify-content: center;
   align-items: center;
   background: #0f0f1a;
+  min-height: 300px;
 }
 
 #canvas-container canvas {
@@ -35,51 +36,97 @@ body {
 
 #controls {
   background: #16213e;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Collapsible header */
+#controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #1a2744;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border-bottom: 1px solid #2a3a5a;
+}
+
+#controls-header .title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #4ecca3;
+}
+
+#controls-header .toggle-icon {
+  font-size: 12px;
+  color: #888;
+  transition: transform 0.3s ease;
+}
+
+#controls-header.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+/* Collapsible content */
+#controls-content {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+#controls-content.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
 }
 
 #stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
 .stat {
   background: #1a1a2e;
-  padding: 12px;
+  padding: 10px 8px;
   border-radius: 8px;
   text-align: center;
 }
 
 .stat .label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: #888;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .stat .value {
   display: block;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #4ecca3;
 }
 
 #buttons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .btn {
   flex: 1;
   min-height: 48px;
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 12px 14px;
+  font-size: 15px;
   font-weight: 500;
   border: none;
   border-radius: 8px;
@@ -162,9 +209,19 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #info p {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
   color: #999;
+}
+
+#info p.hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #777;
+}
+
+#info strong {
+  color: #4ecca3;
 }
 
 /* Landscape orientation on mobile */
@@ -175,12 +232,29 @@ input[type="range"]::-moz-range-thumb {
 
   #canvas-container {
     flex: 2;
+    min-height: auto;
   }
 
   #controls {
     flex: 1;
     max-width: 320px;
     overflow-y: auto;
+  }
+
+  #controls-header {
+    display: none;
+  }
+
+  #controls-content {
+    max-height: none !important;
+    padding: 16px !important;
+    opacity: 1 !important;
+  }
+
+  #controls-content.collapsed {
+    max-height: none !important;
+    padding: 16px !important;
+    opacity: 1 !important;
   }
 }
 
@@ -193,23 +267,43 @@ input[type="range"]::-moz-range-thumb {
   #canvas-container {
     flex: 2;
     padding: 20px;
+    min-height: auto;
   }
 
   #controls {
     flex: 1;
     max-width: 360px;
-    padding: 24px;
+  }
+
+  #controls-header {
+    display: none;
+  }
+
+  #controls-content {
+    padding: 24px !important;
+    max-height: none !important;
+    opacity: 1 !important;
+  }
+
+  #controls-content.collapsed {
+    max-height: none !important;
+    padding: 24px !important;
+    opacity: 1 !important;
   }
 
   #stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .stat {
-    padding: 16px;
+    padding: 14px;
+  }
+
+  .stat .label {
+    font-size: 11px;
   }
 
   .stat .value {
-    font-size: 24px;
+    font-size: 20px;
   }
 }

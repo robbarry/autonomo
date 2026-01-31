@@ -1,8 +1,10 @@
 // Neural Network with real matrix math
-// Architecture: 8 inputs -> 12 hidden -> 2 outputs
+// Architecture: variable inputs -> variable hidden -> 2 outputs
 
 class NeuralNetwork {
-  constructor(inputSize = 8, hiddenSize = 12, outputSize = 2) {
+  constructor(inputSize = 18, hiddenSize = 16, outputSize = 4) {
+    // 18 inputs: 8 food rays + 8 wall rays + energy + speed
+    // 4 outputs: turn rate, speed, seek food vs mate preference
     this.inputSize = inputSize;
     this.hiddenSize = hiddenSize;
     this.outputSize = outputSize;
@@ -12,6 +14,10 @@ class NeuralNetwork {
     this.biasH = this.randomArray(hiddenSize);
     this.weightsHO = this.randomMatrix(outputSize, hiddenSize, hiddenSize);
     this.biasO = this.randomArray(outputSize);
+
+    // Adaptive mutation parameters (these evolve too)
+    this.mutationMagnitude = 0.3;
+    this.mutationRate = 0.15;
   }
 
   // Xavier initialization for better gradient flow
@@ -30,7 +36,7 @@ class NeuralNetwork {
   randomArray(size) {
     const arr = [];
     for (let i = 0; i < size; i++) {
-      arr[i] = 0; // Initialize biases to zero
+      arr[i] = 0;
     }
     return arr;
   }
@@ -49,15 +55,14 @@ class NeuralNetwork {
   }
 
   sigmoid(x) {
-    return 1 / (1 + Math.exp(-x));
+    return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x))));
   }
 
   // Forward propagation
   forward(inputs) {
-    // Input validation
     if (inputs.length !== this.inputSize) {
       console.error(`Expected ${this.inputSize} inputs, got ${inputs.length}`);
-      return [0.5, 0.5];
+      return new Array(this.outputSize).fill(0.5);
     }
 
     // Hidden layer: tanh(W_ih * inputs + b_h)
@@ -90,6 +95,8 @@ class NeuralNetwork {
     nn.biasH = [...this.biasH];
     nn.weightsHO = this.copyMatrix(this.weightsHO);
     nn.biasO = [...this.biasO];
+    nn.mutationMagnitude = this.mutationMagnitude;
+    nn.mutationRate = this.mutationRate;
     return nn;
   }
 
@@ -97,46 +104,81 @@ class NeuralNetwork {
     return matrix.map(row => [...row]);
   }
 
-  // Uniform crossover with another network
+  // Calculate genomic distance for speciation
+  getGenomicDistance(other) {
+    let distance = 0;
+    let totalParams = 0;
+
+    // Compare input-hidden weights
+    for (let i = 0; i < this.hiddenSize; i++) {
+      for (let j = 0; j < this.inputSize; j++) {
+        distance += Math.abs(this.weightsIH[i][j] - other.weightsIH[i][j]);
+        totalParams++;
+      }
+      distance += Math.abs(this.biasH[i] - other.biasH[i]);
+      totalParams++;
+    }
+
+    // Compare hidden-output weights
+    for (let i = 0; i < this.outputSize; i++) {
+      for (let j = 0; j < this.hiddenSize; j++) {
+        distance += Math.abs(this.weightsHO[i][j] - other.weightsHO[i][j]);
+        totalParams++;
+      }
+      distance += Math.abs(this.biasO[i] - other.biasO[i]);
+      totalParams++;
+    }
+
+    return distance / totalParams;
+  }
+
+  // Blended crossover with another network
   crossover(partner) {
     const child = new NeuralNetwork(this.inputSize, this.hiddenSize, this.outputSize);
+
+    const blend = (v1, v2) => {
+      const alpha = Math.random();
+      return alpha * v1 + (1 - alpha) * v2;
+    };
 
     // Crossover input-hidden weights
     for (let i = 0; i < this.hiddenSize; i++) {
       for (let j = 0; j < this.inputSize; j++) {
-        child.weightsIH[i][j] = Math.random() < 0.5
-          ? this.weightsIH[i][j]
-          : partner.weightsIH[i][j];
+        child.weightsIH[i][j] = blend(this.weightsIH[i][j], partner.weightsIH[i][j]);
       }
-    }
-
-    // Crossover hidden biases
-    for (let i = 0; i < this.hiddenSize; i++) {
-      child.biasH[i] = Math.random() < 0.5 ? this.biasH[i] : partner.biasH[i];
+      child.biasH[i] = blend(this.biasH[i], partner.biasH[i]);
     }
 
     // Crossover hidden-output weights
     for (let i = 0; i < this.outputSize; i++) {
       for (let j = 0; j < this.hiddenSize; j++) {
-        child.weightsHO[i][j] = Math.random() < 0.5
-          ? this.weightsHO[i][j]
-          : partner.weightsHO[i][j];
+        child.weightsHO[i][j] = blend(this.weightsHO[i][j], partner.weightsHO[i][j]);
       }
+      child.biasO[i] = blend(this.biasO[i], partner.biasO[i]);
     }
 
-    // Crossover output biases
-    for (let i = 0; i < this.outputSize; i++) {
-      child.biasO[i] = Math.random() < 0.5 ? this.biasO[i] : partner.biasO[i];
-    }
+    // Blend adaptive mutation parameters
+    child.mutationMagnitude = blend(this.mutationMagnitude, partner.mutationMagnitude);
+    child.mutationRate = blend(this.mutationRate, partner.mutationRate);
 
     return child;
   }
 
-  // Mutate weights with gaussian noise
-  mutate(mutationRate) {
+  // Mutate weights with adaptive gaussian noise
+  mutate() {
+    // First, mutate the mutation parameters themselves (meta-evolution)
+    if (Math.random() < 0.1) {
+      this.mutationMagnitude += this.gaussianRandom() * 0.05;
+      this.mutationMagnitude = Math.max(0.01, Math.min(1.0, this.mutationMagnitude));
+    }
+    if (Math.random() < 0.1) {
+      this.mutationRate += this.gaussianRandom() * 0.03;
+      this.mutationRate = Math.max(0.01, Math.min(0.5, this.mutationRate));
+    }
+
     const mutateValue = (val) => {
-      if (Math.random() < mutationRate) {
-        return val + this.gaussianRandom() * 0.5;
+      if (Math.random() < this.mutationRate) {
+        return val + this.gaussianRandom() * this.mutationMagnitude;
       }
       return val;
     };
